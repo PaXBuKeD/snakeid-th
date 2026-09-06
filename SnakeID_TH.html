@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SnakeID TH — ตัวช่วยจำแนกงูพิษในประเทศไทย</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  body{font-family:'Noto Sans Thai',sans-serif}
+  .fade{animation:f .25s ease}
+  @keyframes f{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .sel{border-color:#10b981!important;background:#ecfdf5}
+  button:focus-visible{outline:3px solid #34d399;outline-offset:2px}
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 pb-28">
+
+<header class="bg-slate-900 text-white sticky top-0 z-40 shadow-lg">
+  <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+    <button onclick="show('home')" class="text-left">
+      <h1 class="font-bold text-lg leading-tight">🐍 SnakeID TH</h1>
+      <p class="text-[11px] text-slate-400">ตัวช่วยจำแนกงูพิษในประเทศไทย</p>
+    </button>
+    <button onclick="show('firstaid')" class="bg-red-600 hover:bg-red-700 px-3 py-2 rounded-lg text-sm font-bold">🚑 ปฐมพยาบาล</button>
+  </div>
+</header>
+
+<main class="max-w-3xl mx-auto px-4 py-5">
+
+<!-- ══ HOME ══ -->
+<section id="home" class="fade">
+  <div class="bg-red-50 border-2 border-red-300 rounded-xl p-4 mb-5">
+    <p class="font-bold text-red-800 mb-1">⚠️ ถูกงูกัดอยู่ตอนนี้ใช่ไหม?</p>
+    <p class="text-sm text-red-700 mb-3">อย่ารอผลจากแอพ — ไปโรงพยาบาลทันที การระบุชนิดงูเป็นเพียงข้อมูลเสริมให้แพทย์</p>
+    <div class="flex gap-2">
+      <a href="tel:1669" class="flex-1 text-center bg-red-600 text-white py-2.5 rounded-lg font-bold">📞 โทร 1669</a>
+      <button onclick="show('firstaid')" class="flex-1 bg-white border-2 border-red-400 text-red-700 py-2.5 rounded-lg font-bold">ปฐมพยาบาล</button>
+    </div>
+  </div>
+
+  <h2 class="font-bold text-xl mb-3">เลือกวิธีจำแนก</h2>
+  <div class="grid gap-3 mb-6">
+    <button onclick="startWizard()" class="bg-white border-2 border-emerald-500 rounded-xl p-4 text-left hover:bg-emerald-50">
+      <p class="font-bold text-emerald-800">📋 ตอบคำถามลักษณะงู</p>
+      <p class="text-sm text-slate-600 mt-1">แม่นยำที่สุด — ตอบ 6 คำถามเกี่ยวกับสิ่งที่เห็น</p>
+    </button>
+    <button onclick="show('photo')" class="bg-white border-2 border-sky-500 rounded-xl p-4 text-left hover:bg-sky-50">
+      <p class="font-bold text-sky-800">📷 อัปโหลดรูปถ่าย</p>
+      <p class="text-sm text-slate-600 mt-1">ใช้โมเดล AI (ต้องเชื่อมต่อโมเดลก่อน)</p>
+    </button>
+    <button onclick="show('browse')" class="bg-white border-2 border-slate-300 rounded-xl p-4 text-left hover:bg-slate-100">
+      <p class="font-bold">📖 เปิดดูรายชื่องูทั้งหมด</p>
+      <p class="text-sm text-slate-600 mt-1">ฐานข้อมูลงูพิษสำคัญ 7 ชนิด + งูที่มักถูกเข้าใจผิด</p>
+    </button>
+  </div>
+
+  <div class="bg-white rounded-xl p-4 border">
+    <label for="region" class="font-bold text-sm block mb-2">📍 พื้นที่ที่พบงู (ช่วยตัดชนิดที่ไม่พบในภูมิภาค)</label>
+    <select id="region" onchange="saveRegion()" class="w-full border rounded-lg p-2.5 text-sm">
+      <option value="all">ไม่ระบุ / ทั่วประเทศ</option>
+      <option value="N">ภาคเหนือ</option>
+      <option value="NE">ภาคตะวันออกเฉียงเหนือ</option>
+      <option value="C">ภาคกลาง</option>
+      <option value="E">ภาคตะวันออก</option>
+      <option value="S">ภาคใต้</option>
+    </select>
+  </div>
+</section>
+
+<!-- ══ WIZARD ══ -->
+<section id="wizard" class="hidden fade">
+  <div class="bg-white rounded-xl border p-5">
+    <div class="h-2 bg-slate-200 rounded-full mb-4"><div id="bar" class="h-2 bg-emerald-500 rounded-full transition-all" style="width:0%"></div></div>
+    <p id="qNum" class="text-xs text-slate-500 mb-1"></p>
+    <h2 id="qText" class="font-bold text-lg mb-4"></h2>
+    <div id="qOpts" class="grid gap-2"></div>
+    <div class="flex gap-2 mt-4">
+      <button onclick="backQ()" class="flex-1 border-2 py-2 rounded-lg text-sm">← ย้อนกลับ</button>
+      <button onclick="skipQ()" class="flex-1 border-2 py-2 rounded-lg text-sm text-slate-500">ข้ามข้อนี้ →</button>
+    </div>
+  </div>
+</section>
+
+<section id="result" class="hidden fade"></section>
+
+<!-- ══ PHOTO ══ -->
+<section id="photo" class="hidden fade">
+  <div class="bg-white rounded-xl border p-5">
+    <h2 class="font-bold text-lg mb-3">📷 จำแนกจากรูปถ่าย</h2>
+    <div class="grid grid-cols-2 gap-2 mb-3">
+      <button onclick="pick(true)" class="border-2 border-sky-400 text-sky-700 rounded-lg py-3 text-sm font-bold">📸 ถ่ายภาพ</button>
+      <button onclick="pick(false)" class="border-2 border-slate-300 rounded-lg py-3 text-sm font-bold">🖼️ เลือกจากคลัง</button>
+    </div>
+    <input type="file" accept="image/*" id="file" onchange="preview(event)" class="hidden">
+    <img id="prev" alt="รูปที่อัปโหลด" class="hidden w-full rounded-lg mb-3 max-h-72 object-contain bg-slate-100">
+    <div id="aiOut" class="text-sm"></div>
+    <div class="bg-amber-50 border border-amber-300 rounded-lg p-3 text-xs text-amber-900 mt-3">
+      <b>สถานะโมเดล:</b> <span id="mstat">ยังไม่ได้ตั้งค่า</span> — แก้ตัวแปร <code>API_ENDPOINT</code> ให้ชี้ไป backend ของคุณ (ดูไฟล์ <code>server.js</code> ที่แนบมา)
+    </div>
+    <button onclick="show('home')" class="mt-4 text-sm text-slate-500 underline">← กลับหน้าแรก</button>
+  </div>
+</section>
+
+<section id="browse" class="hidden fade">
+  <h2 class="font-bold text-xl mb-3">📖 ฐานข้อมูลงู</h2>
+  <div id="browseList" class="grid gap-3"></div>
+  <button onclick="show('home')" class="mt-4 text-sm text-slate-500 underline">← กลับหน้าแรก</button>
+</section>
+
+<!-- ══ FIRST AID ══ -->
+<section id="firstaid" class="hidden fade">
+  <div class="bg-white rounded-xl border-2 border-red-300 p-5">
+    <h2 class="font-bold text-xl text-red-800 mb-4">🚑 ปฐมพยาบาลเมื่อถูกงูกัด</h2>
+    <h3 class="font-bold text-emerald-700 mb-2">✅ สิ่งที่ต้องทำ</h3>
+    <ol class="list-decimal ml-5 space-y-2 text-sm mb-5">
+      <li><b>ตั้งสติ อยู่นิ่ง</b> — ยิ่งเคลื่อนไหว/ตกใจ พิษยิ่งกระจายเร็ว</li>
+      <li><b>ล้างแผลด้วยน้ำสะอาด</b> เบา ๆ ไม่ต้องขัดถู</li>
+      <li><b>ถอดแหวน นาฬิกา กำไล</b> ออกก่อนอวัยวะบวม</li>
+      <li><b>ดามอวัยวะให้นิ่ง</b> วางระดับเดียวกับหัวใจหรือต่ำกว่า</li>
+      <li><b>ไปโรงพยาบาลทันที</b> ให้คนอื่นขับรถให้ หรือโทร <a href="tel:1669" class="text-red-600 font-bold underline">1669</a></li>
+      <li><b>ถ่ายรูปงู</b> ถ้าปลอดภัย (อย่าเสี่ยงจับ)</li>
+      <li><b>จดเวลาที่ถูกกัด</b> และสังเกตอาการเป็นระยะ</li>
+    </ol>
+    <h3 class="font-bold text-red-700 mb-2">❌ ห้ามทำเด็ดขาด</h3>
+    <ul class="space-y-2 text-sm mb-5">
+      <li>❌ <b>ห้ามขันชะเนาะ / รัดแน่น</b> — ทำให้เนื้อตาย ต้องตัดอวัยวะ</li>
+      <li>❌ <b>ห้ามกรีดแผล ดูดพิษ</b> — ไม่ได้ผล และติดเชื้อ</li>
+      <li>❌ <b>ห้ามประคบน้ำแข็ง / จี้ไฟ</b></li>
+      <li>❌ <b>ห้ามดื่มเหล้า ยาดอง หรือกิน NSAIDs / แอสไพริน</b></li>
+      <li>❌ <b>ห้ามใช้สมุนไพร ยาพอก หรือ "หินดูดพิษ"</b></li>
+      <li>❌ <b>ห้ามรอดูอาการอยู่บ้าน</b> — พิษบางชนิดออกฤทธิ์ช้าเป็นชั่วโมง</li>
+    </ul>
+    <div class="bg-slate-100 rounded-lg p-3 text-sm">
+      <p class="font-bold mb-1">📞 เบอร์สำคัญ</p>
+      <p>การแพทย์ฉุกเฉิน: <a href="tel:1669" class="text-red-600 font-bold">1669</a></p>
+      <p>สถานเสาวภา สภากาชาดไทย: <a href="tel:022520161" class="text-red-600 font-bold">02-252-0161</a></p>
+      <p>ศูนย์พิษวิทยา รามาธิบดี: <a href="tel:1367" class="text-red-600 font-bold">1367</a></p>
+    </div>
+    <button onclick="show('home')" class="mt-4 text-sm text-slate-500 underline">← กลับหน้าแรก</button>
+  </div>
+</section>
+</main>
+
+<div class="fixed bottom-0 inset-x-0 bg-slate-900 text-white text-[11px] px-4 py-2 text-center z-40">
+  ⚠️ เครื่องมือให้ข้อมูลเบื้องต้นเท่านั้น <b>ไม่ใช่การวินิจฉัยทางการแพทย์</b> — ถูกงูกัดให้ไปโรงพยาบาลเสมอ
+</div>
+
+<script>
+"use strict";
+
+/* ═══ DATA ═══ */
+const SNAKES=[
+ {id:'cobra',th:'งูเห่า',sci:'Naja kaouthia',venom:'neuro',danger:3,region:['N','NE','C','E','S'],
+  antivenom:'Cobra antivenin',
+  desc:'แผ่แม่เบี้ยได้ มีดอกจันหรือวงกลมด้านหลังแม่เบี้ย สีน้ำตาลถึงดำ ลำตัวเรียบ',
+  symptoms:'หนังตาตก พูดไม่ชัด กลืนลำบาก หายใจลำบาก แผลบวมและเนื้อตายรอบแผล',
+  tags:{hood:true,headShape:'round',pattern:'plain',color:['brown','black'],pit:false,time:'day'}},
+
+ {id:'king',th:'งูจงอาง',sci:'Ophiophagus hannah',venom:'neuro',danger:3,region:['N','NE','C','E','S'],
+  antivenom:'King cobra antivenin',
+  desc:'ตัวใหญ่มาก ยาว 3–4 เมตร แผ่แม่เบี้ยแคบยาว ไม่มีดอกจัน มีเกล็ดท้ายทอยคู่ใหญ่',
+  symptoms:'อาการทางประสาทรุนแรงและเร็วมาก หายใจล้มเหลวภายใน 30 นาที – 2 ชม.',
+  tags:{hood:true,headShape:'round',pattern:'band',color:['brown','olive'],pit:false,time:'day'}},
+
+ {id:'banded',th:'งูสามเหลี่ยม',sci:'Bungarus fasciatus',venom:'neuro',danger:3,region:['N','NE','C','E','S'],
+  antivenom:'Banded krait antivenin',
+  desc:'ปล้องดำสลับเหลืองชัดเจนรอบตัว สันหลังเป็นสันสามเหลี่ยม หางทู่สั้น',
+  symptoms:'อาการทางประสาท มักไม่ปวดไม่บวมที่แผล ทำให้ผู้ป่วยชะล่าใจ',
+  tags:{hood:false,headShape:'round',pattern:'band',color:['yellow'],pit:false,time:'night'}},
+
+ {id:'krait',th:'งูทับสมิงคลา',sci:'Bungarus candidus',venom:'neuro',danger:3,region:['N','NE','C','E','S'],
+  antivenom:'Malayan krait antivenin',
+  desc:'ปล้องดำสลับขาว/ครีม ท้องขาว ลำตัวเรียบมันวาว หากินกลางคืน',
+  symptoms:'แผลแทบไม่มีอาการ แต่ 6–12 ชม.ต่อมาเกิดอัมพาตกล้ามเนื้อหายใจ — อันตรายมาก',
+  tags:{hood:false,headShape:'round',pattern:'band',color:['white'],pit:false,time:'night'}},
+
+ {id:'russell',th:'งูแมวเซา',sci:'Daboia siamensis',venom:'hemato',danger:3,region:['C','E','NE'],
+  antivenom:"Russell's viper antivenin",
+  desc:'ลำตัวอ้วนสั้น หัวสามเหลี่ยมชัด ลายวงรีสีน้ำตาลเข้มขอบดำ-ขาว เรียง 3 แถว ขู่เสียงดัง',
+  symptoms:'เลือดออกไม่หยุด เลือดไม่แข็งตัว ไตวายเฉียบพลัน ปวดบวมรุนแรง',
+  tags:{hood:false,headShape:'triangle',pattern:'blotch',color:['brown'],pit:false,time:'night'}},
+
+ {id:'malayan',th:'งูกะปะ',sci:'Calloselasma rhodostoma',venom:'hemato',danger:2,region:['S','E','C'],
+  antivenom:'Malayan pit viper antivenin',
+  desc:'หัวสามเหลี่ยม มีแอ่งรับความร้อนระหว่างตากับจมูก ลายสามเหลี่ยมน้ำตาลเข้มสลับซ้ายขวา',
+  symptoms:'ปวดบวมมาก เลือดออกตามไรฟัน เลือดไม่แข็งตัว เนื้อตายรอบแผล',
+  tags:{hood:false,headShape:'triangle',pattern:'blotch',color:['brown'],pit:true,time:'night'}},
+
+ {id:'greenpit',th:'งูเขียวหางไหม้',sci:'Trimeresurus spp.',venom:'hemato',danger:2,region:['N','NE','C','E','S'],
+  antivenom:'Green pit viper antivenin',
+  desc:'ตัวเขียว หางสีแดง-น้ำตาลไหม้ หัวสามเหลี่ยมชัด ตาแดง รูม่านตาเส้นตั้ง มีแอ่งรับความร้อน',
+  symptoms:'ปวดบวมบริเวณแผล เลือดออกผิดปกติ เกล็ดเลือดต่ำ',
+  tags:{hood:false,headShape:'triangle',pattern:'plain',color:['green'],pit:true,time:'night'}},
+
+ {id:'wolf',th:'งูปล้องฉนวน',sci:'Lycodon spp.',venom:'none',danger:0,region:['N','NE','C','E','S'],
+  antivenom:'ไม่ต้องใช้เซรุ่ม',
+  desc:'คล้ายงูทับสมิงคลามาก แต่ปล้องขาวไม่เรียงรอบตัวสม่ำเสมอ หัวแบนกว่า ลำตัวเล็กเรียว',
+  symptoms:'ไม่มีพิษต่อคน — ล้างแผลป้องกันติดเชื้อ และยังควรพบแพทย์เพื่อยืนยัน',
+  tags:{hood:false,headShape:'round',pattern:'band',color:['white'],pit:false,time:'night'}},
+
+ {id:'vine',th:'งูเขียวพระอินทร์',sci:'Chrysopelea ornata',venom:'mild',danger:1,region:['N','NE','C','E','S'],
+  antivenom:'ไม่มีเซรุ่มเฉพาะ (พิษอ่อน)',
+  desc:'ตัวเขียวมีลายดำ หัวมนไม่เป็นสามเหลี่ยม รูม่านตากลม หางไม่แดง เลื้อยบนต้นไม้',
+  symptoms:'พิษอ่อนมาก อาจบวมแดงเล็กน้อย ไม่มีอาการรุนแรงในคน',
+  tags:{hood:false,headShape:'round',pattern:'plain',color:['green'],pit:false,time:'day'}},
+
+ {id:'rat',th:'งูทางมะพร้าว',sci:'Ptyas mucosa',venom:'none',danger:0,region:['N','NE','C','E','S'],
+  antivenom:'ไม่ต้องใช้เซรุ่ม',
+  desc:'ตัวใหญ่ยาว สีน้ำตาลอมเหลือง หัวมน ตากลมโต ว่องไวมาก มักถูกเข้าใจผิดว่าเป็นจงอาง',
+  symptoms:'ไม่มีพิษต่อคน',
+  tags:{hood:false,headShape:'round',pattern:'plain',color:['brown','olive'],pit:false,time:'day'}}
+];
+
+const CLASS_ORDER=['cobra','king','banded','krait','russell','malayan','greenpit','wolf','vine','rat'];
+
+const QUESTIONS=[
+ {key:'headShape',w:3,hard:false,q:'รูปร่างหัวของงูเป็นแบบไหน?',
+  opts:[{t:'สามเหลี่ยมชัดเจน กว้างกว่าคอมาก',v:'triangle'},{t:'มน กลม กลืนกับลำคอ',v:'round'}]},
+ {key:'pattern',w:3,hard:false,q:'ลวดลายบนลำตัวเป็นอย่างไร?',
+  opts:[{t:'ปล้อง/บั้งพาดรอบตัวเป็นวง',v:'band'},{t:'ลายดวง ลายวงรี หรือสามเหลี่ยมสลับข้าง',v:'blotch'},{t:'สีเรียบ ไม่มีลายชัด',v:'plain'}]},
+ {key:'color',w:2,hard:false,q:'สีหลักของลำตัว?',
+  opts:[{t:'เขียว',v:'green'},{t:'ดำสลับเหลือง',v:'yellow'},{t:'ดำสลับขาว/ครีม',v:'white'},
+        {t:'น้ำตาล/เทา',v:'brown'},{t:'เขียวอมน้ำตาล/โอลีฟ',v:'olive'},{t:'ดำล้วน/เข้มมาก',v:'black'}]},
+ {key:'hood',w:4,hard:true,q:'งูแผ่แม่เบี้ย (แผ่คอ) หรือไม่?',
+  opts:[{t:'แผ่ชัดเจน เป็นแผ่นกว้าง',v:'yes'},{t:'ไม่แผ่',v:'no'}]},
+ {key:'pit',w:4,hard:true,q:'มี "แอ่งรับความร้อน" (รูเล็กระหว่างตากับรูจมูก) หรือไม่?',
+  opts:[{t:'มี — เห็นรูชัดเจน',v:'yes'},{t:'ไม่มี',v:'no'}]},
+ {key:'time',w:1,hard:false,q:'พบงูในช่วงเวลาใด?',
+  opts:[{t:'กลางวัน',v:'day'},{t:'กลางคืน / พลบค่ำ',v:'night'}]}
+];
+
+const V={neuro:{c:'bg-purple-100 text-purple-800',l:'พิษต่อระบบประสาท'},
+         hemato:{c:'bg-rose-100 text-rose-800',l:'พิษต่อระบบเลือด'},
+         mild:{c:'bg-amber-100 text-amber-800',l:'พิษอ่อน'},
+         none:{c:'bg-emerald-100 text-emerald-800',l:'ไม่มีพิษ'},
+         unknown:{c:'bg-slate-200 text-slate-700',l:'ไม่ทราบชนิดพิษ'}};
+
+const SECTIONS=['home','wizard','result','photo','browse','firstaid'];
+
+/* ═══ NAV (รองรับปุ่ม Back ของเบราว์เซอร์) ═══ */
+function render(id){
+  if(SECTIONS.indexOf(id)<0) id='home';
+  SECTIONS.forEach(s=>document.getElementById(s).classList.add('hidden'));
+  const el=document.getElementById(id);
+  el.classList.remove('hidden');
+  el.classList.remove('fade'); void el.offsetWidth; el.classList.add('fade');
+  window.scrollTo(0,0);
+}
+function show(id){ render(id); history.pushState({id:id},''); }
+window.addEventListener('popstate',function(e){ render(e.state&&e.state.id?e.state.id:'home'); });
+history.replaceState({id:'home'},'');
+
+/* ═══ REGION (จำค่าไว้) ═══ */
+function saveRegion(){ try{localStorage.setItem('snakeRegion',document.getElementById('region').value)}catch(e){} }
+(function(){ try{ const r=localStorage.getItem('snakeRegion'); if(r) document.getElementById('region').value=r; }catch(e){} })();
+function getRegion(){ const el=document.getElementById('region'); return el?el.value:'all'; }
+
+/* ═══ WIZARD ═══ */
+let step=0, answers={};
+function startWizard(){ step=0; answers={}; render('wizard'); history.pushState({id:'wizard'},''); renderQ(); }
+
+function renderQ(){
+  const q=QUESTIONS[step];
+  document.getElementById('bar').style.width=Math.round((step)/QUESTIONS.length*100)+'%';
+  document.getElementById('qNum').textContent='คำถามที่ '+(step+1)+' จาก '+QUESTIONS.length;
+  document.getElementById('qText').textContent=q.q;
+  const cur=answers[q.key];
+  const html=q.opts.map(function(o){
+    const on=(cur===o.v)?' sel':'';
+    return '<button type="button" data-v="'+o.v+'" onclick="answer(this.dataset.v)" '+
+      'class="text-left border-2 border-slate-200 hover:border-emerald-500 hover:bg-emerald-50 rounded-lg p-3 text-sm'+on+'">'+o.t+'</button>';
+  }).join('')+
+  '<button type="button" onclick="answer(\'?\')" class="text-left border-2 border-dashed border-slate-300 rounded-lg p-3 text-sm text-slate-500'+(cur==='?'?' sel':'')+'">ไม่แน่ใจ / ไม่ได้สังเกต</button>';
+  document.getElementById('qOpts').innerHTML=html;
+}
+function answer(v){ answers[QUESTIONS[step].key]=v; next(); }
+function skipQ(){ answers[QUESTIONS[step].key]='?'; next(); }
+function next(){ step++; if(step<QUESTIONS.length) renderQ(); else score(); }
+function backQ(){ if(step>0){ step--; renderQ(); } else show('home'); }
+function editAnswers(){ step=QUESTIONS.length-1; render('wizard'); history.pushState({id:'wizard'},''); renderQ(); }
+
+/* ═══ SCORING ═══ */
+function score(){
+  const region=getRegion();
+  let pool=SNAKES.filter(function(s){ return region==='all'||s.region.indexOf(region)>=0; });
+  if(pool.length===0) pool=SNAKES.slice();          // FIX: กันผลลัพธ์ว่าง
+
+  let maxTotal=0;
+  QUESTIONS.forEach(function(q){ if(answers[q.key]&&answers[q.key]!=='?') maxTotal+=q.w; });
+
+  if(maxTotal===0){ renderNoData(); return; }        // FIX: ตอบ "ไม่แน่ใจ" ทั้งหมด
+
+  const scored=pool.map(function(s){
+    let pts=0;
+    QUESTIONS.forEach(function(q){
+      const a=answers[q.key];
+      if(!a||a==='?') return;
+      let match;
+      if(q.key==='hood')      match=(s.tags.hood===(a==='yes'));
+      else if(q.key==='pit')  match=(s.tags.pit===(a==='yes'));
+      else if(q.key==='color')match=(s.tags.color.indexOf(a)>=0);
+      else                    match=(s.tags[q.key]===a);
+      if(match) pts+=q.w;
+      else if(q.hard) pts-=q.w;                      // FIX: หักคะแนนลักษณะชี้ขาดที่ขัดแย้ง
+    });
+    const conf=Math.max(0,Math.round(pts/maxTotal*100));
+    return Object.assign({},s,{conf:conf});
+  }).sort(function(a,b){
+    if(b.conf!==a.conf) return b.conf-a.conf;
+    return b.danger-a.danger;                        // FIX: เสมอกัน → งูอันตรายกว่าขึ้นก่อน
+  });
+
+  renderResult(scored.slice(0,3),scored);
+}
+
+function renderNoData(){
+  document.getElementById('result').innerHTML=
+    '<div class="bg-amber-50 border-2 border-amber-400 rounded-xl p-5">'+
+    '<p class="font-bold text-amber-900 mb-2">ไม่สามารถประเมินได้</p>'+
+    '<p class="text-sm text-amber-800 mb-3">คุณตอบ "ไม่แน่ใจ" ทุกข้อ ระบบจึงไม่มีข้อมูลพอ '+
+    '<b>กรุณาสันนิษฐานว่าเป็นงูพิษไว้ก่อน</b> และไปโรงพยาบาลทันที</p>'+
+    '<div class="flex gap-2"><a href="tel:1669" class="flex-1 text-center bg-red-600 text-white py-2.5 rounded-lg font-bold text-sm">📞 1669</a>'+
+    '<button onclick="startWizard()" class="flex-1 border-2 py-2.5 rounded-lg text-sm">ตอบใหม่</button></div></div>';
+  show('result');
+}
+
+function card(s,i){
+  const v=V[s.venom]||V.none;
+  return '<div class="bg-white rounded-xl border-2 '+(i===0?'border-emerald-500':'border-slate-200')+' p-4 mb-3">'+
+   '<div class="flex justify-between items-start mb-2"><div>'+
+   '<p class="font-bold text-lg">'+(i+1)+'. '+s.th+'</p>'+
+   '<p class="text-xs italic text-slate-500">'+s.sci+'</p></div>'+
+   '<p class="font-bold text-2xl '+(s.conf>=70?'text-emerald-600':'text-amber-600')+'">'+s.conf+'%</p></div>'+
+   '<span class="inline-block '+v.c+' text-xs px-2 py-1 rounded-full font-bold mb-2">'+v.l+'</span>'+
+   '<p class="text-sm mb-2"><b>ลักษณะ:</b> '+s.desc+'</p>'+
+   '<p class="text-sm mb-2"><b>อาการเมื่อถูกกัด:</b> '+s.symptoms+'</p>'+
+   '<p class="text-sm"><b>เซรุ่มแก้พิษ:</b> '+s.antivenom+'</p></div>';
+}
+
+function extraGuessCard(g){
+  if(!g || !g.name_th) return '';
+  const v=V[g.venom_type]||V.unknown;
+  return '<div class="bg-slate-50 border-2 border-dashed border-slate-400 rounded-xl p-4 mb-4">'+
+   '<p class="font-bold text-slate-700 mb-1">🔎 AI ประเมินเสริม (อยู่นอกฐานข้อมูลที่ตรวจสอบแล้ว)</p>'+
+   '<p class="text-xs text-slate-500 mb-2">รูปนี้ไม่ตรงกับงู 10 ชนิดในฐานข้อมูลหลัก ต่อไปนี้เป็นการเดาจากความรู้ทั่วไปของ AI '+
+   '<b>ยังไม่ผ่านการตรวจสอบข้อมูลเซรุ่ม/ปฐมพยาบาลแบบเฉพาะเจาะจง</b></p>'+
+   '<p class="text-sm mb-1"><b>'+g.name_th+'</b>'+(g.sci_name?' <span class="italic text-slate-500">('+g.sci_name+')</span>':'')+'</p>'+
+   '<span class="inline-block '+v.c+' text-xs px-2 py-1 rounded-full font-bold mb-2">'+v.l+'</span>'+
+   (g.reasoning?'<p class="text-sm text-slate-600">'+g.reasoning+'</p>':'')+
+   '</div>';
+}
+
+function renderExtraOnly(g){
+  document.getElementById('result').innerHTML=
+   '<div class="bg-amber-50 border-2 border-amber-400 rounded-xl p-4 mb-4">'+
+   '<p class="font-bold text-amber-900">⚠️ ไม่พบชนิดที่ตรงในฐานข้อมูลหลัก</p>'+
+   '<p class="text-sm text-amber-800 mt-1">กรุณา <b>สันนิษฐานว่าเป็นงูพิษไว้ก่อน</b> และไปโรงพยาบาลทันที</p></div>'+
+   extraGuessCard(g)+
+   '<div class="bg-red-50 border-2 border-red-300 rounded-xl p-4 mt-4">'+
+   '<div class="flex gap-2"><a href="tel:1669" class="flex-1 text-center bg-red-600 text-white py-2.5 rounded-lg font-bold text-sm">📞 1669</a>'+
+   '<button onclick="show(\'firstaid\')" class="flex-1 bg-white border-2 border-red-400 text-red-700 py-2.5 rounded-lg font-bold text-sm">ปฐมพยาบาล</button></div></div>'+
+   '<div class="grid grid-cols-2 gap-2 mt-3">'+
+   '<button onclick="startWizard()" class="border-2 py-2.5 rounded-lg text-sm">ลองโหมดตอบคำถาม</button>'+
+   '<button onclick="show(\'home\')" class="border-2 py-2.5 rounded-lg text-sm">หน้าแรก</button></div>';
+  show('result');
+}
+
+function renderResult(top,all,extraGuess){
+  const best=top[0];
+  let warn='';
+  if(best.conf<70){
+    warn+='<div class="bg-amber-50 border-2 border-amber-400 rounded-xl p-4 mb-4">'+
+      '<p class="font-bold text-amber-900">⚠️ ระบบไม่มั่นใจในผลลัพธ์ ('+best.conf+'%)</p>'+
+      '<p class="text-sm text-amber-800 mt-1">ข้อมูลยังไม่เพียงพอ กรุณา <b>สันนิษฐานว่าเป็นงูพิษไว้ก่อน</b> และไปโรงพยาบาลทันที</p></div>';
+  }
+  // FIX (ความปลอดภัย): เตือนถ้าอันดับ 1 ไม่มีพิษ แต่มีงูพิษคะแนนใกล้เคียง
+  if(best.venom==='none'||best.venom==='mild'){
+    const near=(all||top).filter(function(s){return (s.venom==='neuro'||s.venom==='hemato')&&s.conf>=best.conf-20;});
+    if(near.length){
+      warn+='<div class="bg-red-50 border-2 border-red-400 rounded-xl p-4 mb-4">'+
+        '<p class="font-bold text-red-800">🚨 ระวัง: มีงูพิษที่ลักษณะใกล้เคียงกันมาก</p>'+
+        '<p class="text-sm text-red-700 mt-1">แม้อันดับ 1 จะเป็นงูไม่มีพิษ แต่ '+near.map(function(s){return s.th}).join(', ')+
+        ' มีคะแนนใกล้เคียง <b>ห้ามใช้ผลนี้ตัดสินใจไม่ไปโรงพยาบาล</b></p></div>';
+    }
+  }
+  document.getElementById('result').innerHTML=warn+extraGuessCard(extraGuess)+
+   '<h2 class="font-bold text-xl mb-3">ผลการจำแนก (3 อันดับ)</h2>'+
+   top.map(card).join('')+
+   '<div class="bg-red-50 border-2 border-red-300 rounded-xl p-4 mt-4">'+
+   '<p class="text-sm text-red-800 font-bold mb-2">ผลนี้เป็นเพียงการคาดคะเน ไม่ใช่การวินิจฉัย</p>'+
+   '<div class="flex gap-2"><a href="tel:1669" class="flex-1 text-center bg-red-600 text-white py-2.5 rounded-lg font-bold text-sm">📞 1669</a>'+
+   '<button onclick="show(\'firstaid\')" class="flex-1 bg-white border-2 border-red-400 text-red-700 py-2.5 rounded-lg font-bold text-sm">ปฐมพยาบาล</button></div></div>'+
+   '<div class="grid grid-cols-3 gap-2 mt-3">'+
+   '<button onclick="editAnswers()" class="border-2 py-2.5 rounded-lg text-sm">แก้คำตอบ</button>'+
+   '<button onclick="startWizard()" class="border-2 py-2.5 rounded-lg text-sm">ทำใหม่</button>'+
+   '<button onclick="show(\'home\')" class="border-2 py-2.5 rounded-lg text-sm">หน้าแรก</button></div>';
+  show('result');
+}
+
+/* ═══ BROWSE ═══ */
+(function(){
+  const el=document.getElementById('browseList'); if(!el) return;
+  el.innerHTML=SNAKES.map(function(s){
+    const v=V[s.venom]||V.none;
+    const b={neuro:'border-l-purple-500',hemato:'border-l-rose-500',mild:'border-l-amber-500',none:'border-l-emerald-500'}[s.venom];
+    return '<div class="bg-white rounded-xl border border-l-4 '+b+' p-4">'+
+      '<div class="flex justify-between items-start"><div><p class="font-bold">'+s.th+'</p>'+
+      '<p class="text-xs italic text-slate-500 mb-2">'+s.sci+'</p></div>'+
+      '<span class="'+v.c+' text-[10px] px-2 py-1 rounded-full font-bold whitespace-nowrap">'+v.l+'</span></div>'+
+      '<p class="text-sm mb-1">'+s.desc+'</p>'+
+      '<p class="text-xs text-slate-600"><b>เซรุ่ม:</b> '+s.antivenom+'</p></div>';
+  }).join('');
+})();
+
+/* ═══ PHOTO ═══ */
+let prevUrl=null;
+function pick(useCamera){
+  const f=document.getElementById('file');
+  if(useCamera) f.setAttribute('capture','environment'); else f.removeAttribute('capture');
+  f.click();
+}
+function preview(e){
+  const f=e.target.files&&e.target.files[0];
+  const out=document.getElementById('aiOut');
+  if(!f) return;
+  if(!/^image\//.test(f.type)){ out.innerHTML='<p class="text-red-600">ไฟล์ไม่ใช่รูปภาพ</p>'; return; }
+  if(f.size>12*1024*1024){ out.innerHTML='<p class="text-red-600">ไฟล์ใหญ่เกิน 12MB</p>'; return; }
+  if(prevUrl) URL.revokeObjectURL(prevUrl);          // FIX: memory leak
+  prevUrl=URL.createObjectURL(f);
+  const img=document.getElementById('prev');
+  img.onload=function(){ runModel(img); };            // FIX: รอรูปโหลดเสร็จก่อน inference
+  img.onerror=function(){ out.innerHTML='<p class="text-red-600">เปิดรูปไม่ได้</p>'; };
+  img.src=prevUrl;
+  img.classList.remove('hidden');
+  e.target.value='';                                  // FIX: เลือกไฟล์เดิมซ้ำได้
+}
+
+/* ═══ AI PHOTO MODEL (เชื่อมกับ backend ของคุณเอง ที่เรียก Google AI/Gemini Vision) ═══
+   - หน้าเว็บนี้ "ไม่" เก็บ API key ไว้เอง (ไม่ปลอดภัยถ้าฝัง key ไว้ในไฟล์ฝั่ง client)
+   - หน้าเว็บจะส่งรูป (base64) ไปที่ backend ของคุณ → backend เรียก Gemini → ส่ง JSON กลับมา
+   - ดูตัวอย่าง backend (server.js) ที่แนบมาให้ในชุดไฟล์เดียวกัน
+   - แก้ API_ENDPOINT ด้านล่างให้ชี้ไป backend จริงของคุณก่อนใช้งาน
+*/
+const API_ENDPOINT = 'http://localhost:3001/api/identify-snake'; // TODO: แก้เป็น URL เซิร์ฟเวอร์จริงของคุณ
+
+function imgToBase64(img, maxDim){
+  return new Promise(function(resolve, reject){
+    try{
+      const cv=document.createElement('canvas');
+      let w=img.naturalWidth, h=img.naturalHeight;
+      if(w>=h){ if(w>maxDim){ h=Math.round(h*maxDim/w); w=maxDim; } }
+      else { if(h>maxDim){ w=Math.round(w*maxDim/h); h=maxDim; } }
+      cv.width=w; cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      const dataUrl=cv.toDataURL('image/jpeg',0.85);
+      resolve(dataUrl.split(',')[1]);
+    }catch(err){ reject(err); }
+  });
+}
+
+async function runModel(img){
+  const out=document.getElementById('aiOut');
+  const mstat=document.getElementById('mstat');
+  mstat.textContent='กำลังวิเคราะห์...';
+  out.innerHTML='<div class="bg-slate-100 rounded-lg p-3 text-slate-600">⏳ กำลังวิเคราะห์รูปภาพ...</div>';
+
+  if(API_ENDPOINT.indexOf('YOUR-BACKEND-DOMAIN')>=0){
+    mstat.textContent='ยังไม่ได้ตั้งค่า API_ENDPOINT';
+    out.innerHTML='<div class="bg-amber-50 border border-amber-300 rounded-lg p-3 text-sm text-amber-900">'+
+      'ยังไม่ได้ตั้งค่า API_ENDPOINT ในโค้ด (ดูตัวแปร <code>API_ENDPOINT</code>) — '+
+      '<button onclick="startWizard()" class="underline text-sky-700 font-bold">ใช้โหมดตอบคำถามแทน</button></div>';
+    return;
+  }
+
+  try{
+    const base64=await imgToBase64(img,768);
+    const res=await fetch(API_ENDPOINT,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ image:base64, mimeType:'image/jpeg', region:getRegion() })
+    });
+    if(!res.ok) throw new Error('เซิร์ฟเวอร์ตอบกลับผิดพลาด (HTTP '+res.status+')');
+    const data=await res.json();
+    if(!data.predictions) throw new Error('ไม่ได้รับผลลัพธ์จากเซิร์ฟเวอร์');
+
+    const scored=data.predictions.map(function(p){
+        const s=SNAKES.find(function(x){ return x.id===p.id; });
+        if(!s) return null;
+        return Object.assign({},s,{conf:Math.max(0,Math.min(100,Math.round(p.confidence)))});
+      }).filter(Boolean)
+      .sort(function(a,b){ return b.conf!==a.conf ? b.conf-a.conf : b.danger-a.danger; });
+
+    if(!scored.length){
+      if(data.extra_guess){
+        mstat.textContent='เชื่อมต่อแล้ว (Google AI ผ่านเซิร์ฟเวอร์ของคุณ)';
+        out.innerHTML='';
+        renderExtraOnly(data.extra_guess);
+        return;
+      }
+      throw new Error('ผลลัพธ์จากเซิร์ฟเวอร์ไม่ตรงกับฐานข้อมูลงูที่มี');
+    }
+
+    mstat.textContent='เชื่อมต่อแล้ว (Google AI ผ่านเซิร์ฟเวอร์ของคุณ)';
+    out.innerHTML='';
+    renderResult(scored.slice(0,3),scored,data.extra_guess);
+  }catch(err){
+    mstat.textContent='เชื่อมต่อไม่สำเร็จ';
+    out.innerHTML='<p class="text-red-600 text-sm">วิเคราะห์รูปไม่สำเร็จ: '+err.message+
+      ' — <button onclick="startWizard()" class="underline text-sky-700 font-bold">ใช้โหมดตอบคำถามแทน</button></p>';
+  }
+}
+
+render('home');
+</script>
+</body>
+</html>
