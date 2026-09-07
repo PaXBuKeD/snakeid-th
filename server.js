@@ -39,9 +39,32 @@ const SNAKE_REFERENCE = [
   { id: 'rat',      th: 'งูทางมะพร้าว',     sci: 'Ptyas mucosa',             desc: 'ตัวใหญ่ยาว สีน้ำตาลอมเหลือง หัวมน ตากลมโต ไม่มีพิษ มักถูกเข้าใจผิดว่าเป็นจงอาง' },
 ];
 
+// แปลคำตอบจากโหมดตอบคำถาม (key/value) ให้เป็นข้อความไทยอ่านง่าย — ต้องตรงกับ QUESTIONS ใน SnakeID_TH.html
+const ANSWER_LABELS = {
+  headShape: { triangle: 'หัวสามเหลี่ยมชัดเจน กว้างกว่าคอมาก', round: 'หัวมนกลม กลืนกับลำคอ' },
+  pattern: { band: 'ลายปล้อง/บั้งพาดรอบตัวเป็นวง', blotch: 'ลายดวง/วงรี/สามเหลี่ยมสลับข้าง', plain: 'สีเรียบ ไม่มีลายชัด' },
+  color: { green: 'สีเขียว', yellow: 'สีดำสลับเหลือง', white: 'สีดำสลับขาว/ครีม', brown: 'สีน้ำตาล/เทา', olive: 'สีเขียวอมน้ำตาล/โอลีฟ', black: 'สีดำล้วน/เข้มมาก' },
+  hood: { yes: 'แผ่แม่เบี้ยได้ชัดเจน', no: 'ไม่แผ่แม่เบี้ย' },
+  pit: { yes: 'มีแอ่งรับความร้อนระหว่างตากับรูจมูก', no: 'ไม่มีแอ่งรับความร้อน' },
+  time: { day: 'พบตอนกลางวัน', night: 'พบตอนกลางคืน/พลบค่ำ' },
+};
+
+function answersToText(answers) {
+  if (!answers) return '';
+  const lines = Object.keys(answers)
+    .map((k) => {
+      const v = answers[k];
+      if (!v || v === '?') return null;
+      const label = ANSWER_LABELS[k] && ANSWER_LABELS[k][v];
+      return label ? `- ${label}` : null;
+    })
+    .filter(Boolean);
+  return lines.join('\n');
+}
+
 app.post('/api/identify-snake', async (req, res) => {
   try {
-    const { image, mimeType } = req.body;
+    const { image, mimeType, answers } = req.body;
     if (!image) {
       return res.status(400).json({ error: 'missing "image" (base64) in request body' });
     }
@@ -50,11 +73,17 @@ app.post('/api/identify-snake', async (req, res) => {
       .map((s) => `- id:"${s.id}" | ${s.th} (${s.sci}): ${s.desc}`)
       .join('\n');
 
+    const answersText = answersToText(answers);
+    const answersBlock = answersText
+      ? `\nนอกจากรูปภาพ ผู้ใช้ยังสังเกตลักษณะงูตัวนี้ด้วยตนเองไว้ดังนี้:\n${answersText}\nให้ใช้ทั้งรูปภาพและข้อสังเกตนี้ประกอบกันในการประเมิน ถ้าขัดแย้งกันให้ให้น้ำหนักกับสิ่งที่เห็นในรูปมากกว่า\n`
+      : '';
+
     const prompt = `คุณเป็นผู้ช่วยจำแนกชนิดงูจากรูปภาพสำหรับแอปด้านความปลอดภัย
 เปรียบเทียบรูปที่แนบมากับลักษณะงู 10 ชนิดต่อไปนี้เท่านั้นสำหรับช่อง "predictions" (ห้ามตอบ id นอกเหนือจากรายการ):
 ${referenceText}
-
+${answersBlock}
 ให้ประเมินทุกชนิดที่พอมีความเป็นไปได้ เรียงจากความมั่นใจมากไปน้อย ถ้าดูไม่ออกหรือรูปไม่ชัดให้ confidence ต่ำทุกตัว
+confidence ต้องเป็นจำนวนเต็ม 0 ถึง 100 เท่านั้น (เช่น 87 แปลว่ามั่นใจ 87%) ห้ามตอบเป็นทศนิยม 0 ถึง 1 (ห้ามตอบ 0.87)
 
 ถ้าคุณเห็นว่ารูปนี้ไม่น่าจะตรงกับงู 10 ชนิดข้างต้นเลย (ลักษณะไม่เข้ากับชนิดไหนเลย หรือคุณคิดว่าน่าจะเป็นงูชนิดอื่น)
 ให้เพิ่มข้อมูลในช่อง "extra_guess" ด้วย โดยบอกชื่อที่คุณคิดว่าน่าจะใช่ที่สุดจากความรู้ทั่วไปของคุณ (ภาษาไทยและ/หรือชื่อวิทยาศาสตร์ถ้ารู้)
@@ -63,6 +92,9 @@ ${referenceText}
 
     // ใช้ ai.models.generateContent (API มาตรฐาน เสถียร แนะนำให้ใช้งานจริง)
     // แทน ai.interactions.create ที่ยังเป็นสถานะ Beta และมี breaking change บ่อย
+    console.log('===== PROMPT ที่ส่งให้ Gemini =====');
+    console.log(prompt);
+
     const response = await ai.models.generateContent({
       model: MODEL,
       contents: [
@@ -80,7 +112,7 @@ ${referenceText}
                 type: 'object',
                 properties: {
                   id: { type: 'string' },
-                  confidence: { type: 'number' },
+                  confidence: { type: 'number', description: 'จำนวนเต็ม 0 ถึง 100 (เช่น 87) ห้ามใช้สเกล 0 ถึง 1' },
                 },
                 required: ['id', 'confidence'],
               },
@@ -102,6 +134,9 @@ ${referenceText}
       },
     });
 
+    console.log('===== JSON ดิบที่ Gemini ตอบกลับมา =====');
+    console.log(response.text);
+
     let parsed;
     try {
       parsed = JSON.parse(response.text);
@@ -112,6 +147,15 @@ ${referenceText}
 
     if (!parsed.predictions || !Array.isArray(parsed.predictions)) {
       return res.status(502).json({ error: 'รูปแบบผลลัพธ์จากโมเดลไม่ถูกต้อง' });
+    }
+
+    // กันเหนียว: บางครั้ง Gemini ตอบ confidence เป็นสัดส่วน 0-1 (เช่น 0.98) แทนที่จะเป็น 0-100 ตามที่ขอไว้
+    // ถ้าเจอว่าทุกค่าอยู่ในช่วง 0-1 ให้ถือว่าเป็นสัดส่วนแล้วคูณ 100 ให้อัตโนมัติ
+    const allFractional = parsed.predictions.length > 0 &&
+      parsed.predictions.every((p) => typeof p.confidence === 'number' && p.confidence >= 0 && p.confidence <= 1);
+    if (allFractional) {
+      parsed.predictions = parsed.predictions.map((p) => ({ ...p, confidence: p.confidence * 100 }));
+      console.log('[normalize] confidence ที่ได้เป็นสเกล 0-1 แปลงเป็น 0-100 ให้อัตโนมัติ');
     }
 
     res.json(parsed);

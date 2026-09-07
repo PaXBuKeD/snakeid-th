@@ -73,12 +73,27 @@
   <div class="bg-white rounded-xl border p-5">
     <div class="h-2 bg-slate-200 rounded-full mb-4"><div id="bar" class="h-2 bg-emerald-500 rounded-full transition-all" style="width:0%"></div></div>
     <p id="qNum" class="text-xs text-slate-500 mb-1"></p>
-    <h2 id="qText" class="font-bold text-lg mb-4"></h2>
+    <h2 id="qText" class="font-bold text-lg mb-1"></h2>
+    <p id="qHint" class="text-xs text-slate-500 mb-3"></p>
     <div id="qOpts" class="grid gap-2"></div>
     <div class="flex gap-2 mt-4">
       <button onclick="backQ()" class="flex-1 border-2 py-2 rounded-lg text-sm">← ย้อนกลับ</button>
       <button onclick="skipQ()" class="flex-1 border-2 py-2 rounded-lg text-sm text-slate-500">ข้ามข้อนี้ →</button>
     </div>
+  </div>
+</section>
+
+<!-- ══ REFINE (อัปโหลดรูปเพิ่มหลังตอบคำถามครบ) ══ -->
+<section id="refine" class="hidden fade">
+  <div class="bg-white rounded-xl border p-5">
+    <h2 class="font-bold text-lg mb-2">ต้องการอัปโหลดรูปเพิ่มไหม?</h2>
+    <p class="text-sm text-slate-600 mb-4">ถ้ามีรูปถ่ายงูตัวนี้ อัปโหลดเพิ่มได้ ระบบจะใช้ทั้งคำตอบที่ตอบไปและรูปภาพร่วมกันวิเคราะห์ ช่วยให้แม่นยำขึ้น (ไม่บังคับ)</p>
+    <input type="file" id="refineFile" accept="image/*" capture="environment" class="hidden" onchange="handleRefineFile(this)">
+    <div class="grid gap-2">
+      <button onclick="document.getElementById('refineFile').click()" class="bg-emerald-600 text-white py-2.5 rounded-lg font-bold text-sm">📷 อัปโหลดรูปเพื่อความแม่นยำขึ้น</button>
+      <button onclick="skipRefine()" class="border-2 py-2.5 rounded-lg text-sm">ข้าม ดูผลจากคำตอบเลย</button>
+    </div>
+    <div id="refineOut" class="mt-4"></div>
   </div>
 </section>
 
@@ -216,18 +231,38 @@ const CLASS_ORDER=['cobra','king','banded','krait','russell','malayan','greenpit
 
 const QUESTIONS=[
  {key:'headShape',w:3,hard:false,q:'รูปร่างหัวของงูเป็นแบบไหน?',
-  opts:[{t:'สามเหลี่ยมชัดเจน กว้างกว่าคอมาก',v:'triangle'},{t:'มน กลม กลืนกับลำคอ',v:'round'}]},
+  opts:[{t:'สามเหลี่ยมชัดเจน กว้างกว่าคอมาก',v:'triangle',
+         icon:'<svg viewBox="0 0 100 60" class="w-full h-full"><line x1="5" y1="30" x2="35" y2="30" stroke="#475569" stroke-width="10" stroke-linecap="round"/><polygon points="30,8 92,30 30,52" fill="#475569"/></svg>'},
+        {t:'มน กลม กลืนกับลำคอ',v:'round',
+         icon:'<svg viewBox="0 0 100 60" class="w-full h-full"><line x1="5" y1="30" x2="45" y2="30" stroke="#475569" stroke-width="10" stroke-linecap="round"/><circle cx="65" cy="30" r="26" fill="#475569"/></svg>'}]},
  {key:'pattern',w:3,hard:false,q:'ลวดลายบนลำตัวเป็นอย่างไร?',
-  opts:[{t:'ปล้อง/บั้งพาดรอบตัวเป็นวง',v:'band'},{t:'ลายดวง ลายวงรี หรือสามเหลี่ยมสลับข้าง',v:'blotch'},{t:'สีเรียบ ไม่มีลายชัด',v:'plain'}]},
+  opts:[{t:'ปล้อง/บั้งพาดรอบตัวเป็นวง',v:'band',
+         icon:'<svg viewBox="0 0 100 40" class="w-full h-full"><rect x="4" y="10" width="92" height="20" rx="10" fill="#fde68a"/><rect x="16" y="7" width="9" height="26" fill="#1e293b"/><rect x="40" y="7" width="9" height="26" fill="#1e293b"/><rect x="64" y="7" width="9" height="26" fill="#1e293b"/></svg>'},
+        {t:'ลายดวง ลายวงรี หรือสามเหลี่ยมสลับข้าง',v:'blotch',
+         icon:'<svg viewBox="0 0 100 40" class="w-full h-full"><rect x="4" y="10" width="92" height="20" rx="10" fill="#e7e5e4"/><ellipse cx="24" cy="20" rx="10" ry="7" fill="#78350f"/><ellipse cx="52" cy="20" rx="10" ry="7" fill="#78350f"/><ellipse cx="78" cy="20" rx="9" ry="6" fill="#78350f"/></svg>'},
+        {t:'สีเรียบ ไม่มีลายชัด',v:'plain',
+         icon:'<svg viewBox="0 0 100 40" class="w-full h-full"><rect x="4" y="10" width="92" height="20" rx="10" fill="#84cc16"/></svg>'}]},
  {key:'color',w:2,hard:false,q:'สีหลักของลำตัว?',
-  opts:[{t:'เขียว',v:'green'},{t:'ดำสลับเหลือง',v:'yellow'},{t:'ดำสลับขาว/ครีม',v:'white'},
-        {t:'น้ำตาล/เทา',v:'brown'},{t:'เขียวอมน้ำตาล/โอลีฟ',v:'olive'},{t:'ดำล้วน/เข้มมาก',v:'black'}]},
+  opts:[{t:'เขียว',v:'green',icon:'<div class="w-full h-8 rounded-full" style="background:#16a34a"></div>'},
+        {t:'ดำสลับเหลือง',v:'yellow',icon:'<div class="w-full h-8 rounded-full" style="background:repeating-linear-gradient(45deg,#1e293b,#1e293b 5px,#fde047 5px,#fde047 10px)"></div>'},
+        {t:'ดำสลับขาว/ครีม',v:'white',icon:'<div class="w-full h-8 rounded-full border border-slate-300" style="background:repeating-linear-gradient(45deg,#1e293b,#1e293b 5px,#f8fafc 5px,#f8fafc 10px)"></div>'},
+        {t:'น้ำตาล/เทา',v:'brown',icon:'<div class="w-full h-8 rounded-full" style="background:#78350f"></div>'},
+        {t:'เขียวอมน้ำตาล/โอลีฟ',v:'olive',icon:'<div class="w-full h-8 rounded-full" style="background:#5f6b1f"></div>'},
+        {t:'ดำล้วน/เข้มมาก',v:'black',icon:'<div class="w-full h-8 rounded-full" style="background:#0f172a"></div>'}]},
  {key:'hood',w:4,hard:true,q:'งูแผ่แม่เบี้ย (แผ่คอ) หรือไม่?',
-  opts:[{t:'แผ่ชัดเจน เป็นแผ่นกว้าง',v:'yes'},{t:'ไม่แผ่',v:'no'}]},
+  opts:[{t:'แผ่ชัดเจน เป็นแผ่นกว้าง',v:'yes',
+         icon:'<svg viewBox="0 0 100 60" class="w-full h-full"><path d="M50,58 L18,14 Q50,-6 82,14 L50,58 Z" fill="#166534"/><circle cx="40" cy="18" r="3" fill="#000"/><circle cx="60" cy="18" r="3" fill="#000"/></svg>'},
+        {t:'ไม่แผ่',v:'no',
+         icon:'<svg viewBox="0 0 100 60" class="w-full h-full"><ellipse cx="55" cy="28" rx="20" ry="13" fill="#166534"/><line x1="55" y1="41" x2="55" y2="58" stroke="#166534" stroke-width="12" stroke-linecap="round"/><circle cx="48" cy="24" r="2.5" fill="#000"/><circle cx="63" cy="24" r="2.5" fill="#000"/></svg>'}]},
  {key:'pit',w:4,hard:true,q:'มี "แอ่งรับความร้อน" (รูเล็กระหว่างตากับรูจมูก) หรือไม่?',
-  opts:[{t:'มี — เห็นรูชัดเจน',v:'yes'},{t:'ไม่มี',v:'no'}]},
+  hint:'จุดสีแดงในภาพ = ตำแหน่งแอ่งรับความร้อน',
+  opts:[{t:'มี — เห็นรูชัดเจน',v:'yes',
+         icon:'<svg viewBox="0 0 100 50" class="w-full h-full"><ellipse cx="55" cy="25" rx="38" ry="19" fill="#78350f"/><circle cx="72" cy="17" r="4" fill="#000"/><circle cx="90" cy="23" r="2" fill="#1e293b"/><circle cx="80" cy="20" r="2.8" fill="#dc2626" stroke="#fff" stroke-width="0.8"/></svg>'},
+        {t:'ไม่มี',v:'no',
+         icon:'<svg viewBox="0 0 100 50" class="w-full h-full"><ellipse cx="55" cy="25" rx="38" ry="19" fill="#78350f"/><circle cx="72" cy="17" r="4" fill="#000"/><circle cx="90" cy="23" r="2" fill="#1e293b"/></svg>'}]},
  {key:'time',w:1,hard:false,q:'พบงูในช่วงเวลาใด?',
-  opts:[{t:'กลางวัน',v:'day'},{t:'กลางคืน / พลบค่ำ',v:'night'}]}
+  opts:[{t:'กลางวัน',v:'day',icon:'<div class="text-3xl text-center">☀️</div>'},
+        {t:'กลางคืน / พลบค่ำ',v:'night',icon:'<div class="text-3xl text-center">🌙</div>'}]}
 ];
 
 const V={neuro:{c:'bg-purple-100 text-purple-800',l:'พิษต่อระบบประสาท'},
@@ -236,7 +271,7 @@ const V={neuro:{c:'bg-purple-100 text-purple-800',l:'พิษต่อระบ
          none:{c:'bg-emerald-100 text-emerald-800',l:'ไม่มีพิษ'},
          unknown:{c:'bg-slate-200 text-slate-700',l:'ไม่ทราบชนิดพิษ'}};
 
-const SECTIONS=['home','wizard','result','photo','browse','firstaid'];
+const SECTIONS=['home','wizard','result','photo','browse','firstaid','refine'];
 
 /* ═══ NAV (รองรับปุ่ม Back ของเบราว์เซอร์) ═══ */
 function render(id){
@@ -268,11 +303,14 @@ function renderQ(){
   const cur=answers[q.key];
   const html=q.opts.map(function(o){
     const on=(cur===o.v)?' sel':'';
+    const iconHtml=o.icon?'<div class="w-full h-14 flex items-center justify-center mb-2 px-4">'+o.icon+'</div>':'';
     return '<button type="button" data-v="'+o.v+'" onclick="answer(this.dataset.v)" '+
-      'class="text-left border-2 border-slate-200 hover:border-emerald-500 hover:bg-emerald-50 rounded-lg p-3 text-sm'+on+'">'+o.t+'</button>';
+      'class="text-left border-2 border-slate-200 hover:border-emerald-500 hover:bg-emerald-50 rounded-lg p-3 text-sm'+on+'">'+iconHtml+o.t+'</button>';
   }).join('')+
   '<button type="button" onclick="answer(\'?\')" class="text-left border-2 border-dashed border-slate-300 rounded-lg p-3 text-sm text-slate-500'+(cur==='?'?' sel':'')+'">ไม่แน่ใจ / ไม่ได้สังเกต</button>';
   document.getElementById('qOpts').innerHTML=html;
+  const hintEl=document.getElementById('qHint');
+  if(hintEl) hintEl.textContent=q.hint||'';
 }
 function answer(v){ answers[QUESTIONS[step].key]=v; next(); }
 function skipQ(){ answers[QUESTIONS[step].key]='?'; next(); }
@@ -281,6 +319,7 @@ function backQ(){ if(step>0){ step--; renderQ(); } else show('home'); }
 function editAnswers(){ step=QUESTIONS.length-1; render('wizard'); history.pushState({id:'wizard'},''); renderQ(); }
 
 /* ═══ SCORING ═══ */
+let wizardScored=[];
 function score(){
   const region=getRegion();
   let pool=SNAKES.filter(function(s){ return region==='all'||s.region.indexOf(region)>=0; });
@@ -311,7 +350,64 @@ function score(){
     return b.danger-a.danger;                        // FIX: เสมอกัน → งูอันตรายกว่าขึ้นก่อน
   });
 
-  renderResult(scored.slice(0,3),scored);
+  wizardScored=scored;
+  document.getElementById('refineOut').innerHTML='';
+  show('refine');
+}
+
+function skipRefine(){ renderResult(wizardScored.slice(0,3),wizardScored); }
+
+function handleRefineFile(input){
+  const file=input.files&&input.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const img=new Image();
+    img.onload=function(){ runRefineModel(img); };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function runRefineModel(img){
+  const out=document.getElementById('refineOut');
+  out.innerHTML='<div class="bg-slate-100 rounded-lg p-3 text-slate-600">⏳ กำลังวิเคราะห์รูปร่วมกับคำตอบที่ตอบไป...</div>';
+
+  if(API_ENDPOINT.indexOf('YOUR-BACKEND-DOMAIN')>=0){
+    out.innerHTML='<div class="bg-amber-50 border border-amber-300 rounded-lg p-3 text-sm text-amber-900">'+
+      'ยังไม่ได้ตั้งค่า API_ENDPOINT ในโค้ด — '+
+      '<button onclick="skipRefine()" class="underline text-sky-700 font-bold">ดูผลจากคำตอบแทน</button></div>';
+    return;
+  }
+
+  try{
+    const base64=await imgToBase64(img,768);
+    const res=await fetch(API_ENDPOINT,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ image:base64, mimeType:'image/jpeg', region:getRegion(), answers:answers })
+    });
+    if(!res.ok) throw new Error('เซิร์ฟเวอร์ตอบกลับผิดพลาด (HTTP '+res.status+')');
+    const data=await res.json();
+    if(!data.predictions) throw new Error('ไม่ได้รับผลลัพธ์จากเซิร์ฟเวอร์');
+
+    const scored=data.predictions.map(function(p){
+        const s=SNAKES.find(function(x){ return x.id===p.id; });
+        if(!s) return null;
+        return Object.assign({},s,{conf:Math.max(0,Math.min(100,Math.round(p.confidence)))});
+      }).filter(Boolean)
+      .sort(function(a,b){ return b.conf!==a.conf ? b.conf-a.conf : b.danger-a.danger; });
+
+    if(!scored.length){
+      if(data.extra_guess){ renderExtraOnly(data.extra_guess); return; }
+      throw new Error('ผลลัพธ์จากเซิร์ฟเวอร์ไม่ตรงกับฐานข้อมูลงูที่มี — ใช้ผลจากคำตอบแทน');
+    }
+
+    renderResult(scored.slice(0,3),scored,data.extra_guess);
+  }catch(err){
+    out.innerHTML='<p class="text-red-600 text-sm">วิเคราะห์รูปไม่สำเร็จ: '+err.message+
+      ' — <button onclick="skipRefine()" class="underline text-sky-700 font-bold">ดูผลจากคำตอบแทน</button></p>';
+  }
 }
 
 function renderNoData(){
@@ -442,7 +538,7 @@ function preview(e){
    - ดูตัวอย่าง backend (server.js) ที่แนบมาให้ในชุดไฟล์เดียวกัน
    - แก้ API_ENDPOINT ด้านล่างให้ชี้ไป backend จริงของคุณก่อนใช้งาน
 */
-const API_ENDPOINT = 'http://localhost:3001/api/identify-snake'; // TODO: แก้เป็น URL เซิร์ฟเวอร์จริงของคุณ
+const API_ENDPOINT = 'https://snakeid-th.onrender.com/api/identify-snake'; // TODO: แก้เป็น URL เซิร์ฟเวอร์จริงของคุณ
 
 function imgToBase64(img, maxDim){
   return new Promise(function(resolve, reject){
