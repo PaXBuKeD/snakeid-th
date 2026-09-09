@@ -33,23 +33,37 @@ const MODELS = [
 // พยายามเรียกทีละโมเดลตามลำดับใน MODELS
 // ถ้าเจอ error โควต้าหมด (429 / RESOURCE_EXHAUSTED) จะลองตัวถัดไปให้อัตโนมัติ
 // ถ้าเจอ error อื่น (เช่น API key ผิด, รูปเสีย) จะโยน error ทันทีโดยไม่ลองตัวถัดไป เพราะสลับโมเดลก็ไม่ช่วย
+function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+
+// สถานะที่ "ลองใหม่ได้" — 429 คือโควต้าหมด (ค่อยเปลี่ยนโมเดล), 503 คือ Google เองมีคนใช้งานหนาแน่นชั่วคราว (ลองซ้ำโมเดลเดิมก่อน)
+const RETRYABLE_STATUSES = [429, 503];
+const MAX_RETRIES_PER_MODEL = 2; // ลองโมเดลเดิมซ้ำได้สูงสุดกี่ครั้งก่อนเปลี่ยนโมเดล (สำหรับ error ชั่วคราวอย่าง 503)
+const RETRY_DELAY_MS = 1500;     // เว้นระยะก่อนลองซ้ำ
+
 async function generateWithFallback(contents, config) {
   let lastErr;
   for (const model of MODELS) {
-    try {
-      const response = await ai.models.generateContent({ model, contents, config });
-      console.log(`[model] ใช้โมเดล "${model}" สำเร็จ`);
-      return { response, modelUsed: model };
-    } catch (err) {
-      const status = err.status || (err.error && err.error.code);
-      const isQuotaError = status === 429;
-      console.error(`[model] "${model}" ล้มเหลว (status ${status}): ${err.message}`);
-      lastErr = err;
-      if (!isQuotaError) throw err; // error อื่นที่ไม่ใช่โควต้าหมด ไม่ต้องลองตัวถัดไป
-      console.log('[model] โควต้าหมด กำลังลองโมเดลถัดไป...');
+    for (let attempt = 0; attempt <= MAX_RETRIES_PER_MODEL; attempt++) {
+      try {
+        const response = await ai.models.generateContent({ model, contents, config });
+        console.log(`[model] ใช้โมเดล "${model}" สำเร็จ${attempt > 0 ? ` (หลังลองใหม่ครั้งที่ ${attempt})` : ''}`);
+        return { response, modelUsed: model };
+      } catch (err) {
+        const status = err.status || (err.error && err.error.code);
+        const isRetryable = RETRYABLE_STATUSES.includes(status);
+        console.error(`[model] "${model}" ล้มเหลว (status ${status}, ครั้งที่ ${attempt + 1}): ${err.message}`);
+        lastErr = err;
+        if (!isRetryable) throw err; // error อื่นที่ไม่ใช่โควต้าหมด/คนใช้เยอะชั่วคราว ไม่ต้องลองซ้ำหรือเปลี่ยนโมเดล
+
+        if (attempt < MAX_RETRIES_PER_MODEL) {
+          console.log(`[model] error ชั่วคราว (${status}) — รอ ${RETRY_DELAY_MS}ms แล้วลองโมเดล "${model}" ซ้ำ...`);
+          await sleep(RETRY_DELAY_MS);
+        }
+      }
     }
+    console.log(`[model] ลองโมเดล "${model}" ครบ ${MAX_RETRIES_PER_MODEL + 1} ครั้งแล้วยังไม่สำเร็จ กำลังเปลี่ยนโมเดลถัดไป...`);
   }
-  throw lastErr; // ลองครบทุกตัวแล้วยังไม่สำเร็จ
+  throw lastErr; // ลองครบทุกโมเดล ทุกครั้งแล้วยังไม่สำเร็จ
 }
 
 // รายละเอียดงู 16 ชนิด — คัดลอก/สรุปมาจาก SNAKES ใน SnakeID_TH.html
@@ -195,6 +209,13 @@ confidence ต้องเป็นจำนวนเต็ม 0 ถึง 100 �
     res.json(parsed);
   } catch (err) {
     console.error(err);
+    const status = err.status || (err.error && err.error.code);
+    if (status === 503) {
+      return res.status(503).json({ error: 'ระบบ AI มีผู้ใช้งานหนาแน่นในขณะนี้ กรุณาลองใหม่อีกครั้งในอีกสักครู่' });
+    }
+    if (status === 429) {
+      return res.status(429).json({ error: 'โควต้าการใช้งาน AI เต็มชั่วคราว กรุณาลองใหม่อีกครั้งภายหลัง' });
+    }
     res.status(500).json({ error: err.message || 'เกิดข้อผิดพลาดที่เซิร์ฟเวอร์' });
   }
 });

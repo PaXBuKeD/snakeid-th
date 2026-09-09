@@ -86,7 +86,7 @@ package.json      dependencies ของ backend
 - `server.js` ใช้ `ai.models.generateContent` (ไม่ใช้ Interactions API เพราะยังเป็น Beta และมี breaking change บ่อย)
 - ผลลัพธ์บังคับ schema ผ่าน `responseSchema` ให้ตรงรูปแบบ `{predictions:[{id,confidence}], extra_guess?}` เสมอ
 - มีการ normalize confidence กันกรณี Gemini ตอบเป็นสัดส่วน 0-1 แทน 0-100 (ดูฟังก์ชันหลัง `if (!parsed.predictions...)`)
-- `MODELS` array คือลิสต์โมเดลสำรอง ถ้าตัวแรกโควต้าหมด (HTTP 429) จะลองตัวถัดไปอัตโนมัติ ผ่านฟังก์ชัน `generateWithFallback()`
+- `MODELS` array คือลิสต์โมเดลสำรอง ผ่านฟังก์ชัน `generateWithFallback()`: ถ้าเจอ 429 (โควต้าหมด) จะลองโมเดลถัดไปในลิสต์ ถ้าเจอ 503 (Google เองมีคนใช้งานหนาแน่นชั่วคราว) จะลองโมเดลเดิมซ้ำก่อน (สูงสุด 2 ครั้ง เว้นระยะ 1.5 วินาที) แล้วค่อยเปลี่ยนโมเดลถ้ายังไม่หาย
 - ถ้าผู้ใช้ตอบคำถามมาก่อนแล้วค่อยอัปโหลดรูป (โหมด "refine") หน้าเว็บจะส่ง `answers` ไปด้วย และ `server.js` จะแปลงเป็นข้อความไทยผ่าน `ANSWER_LABELS`/`answersToText()` ใส่ใน prompt ให้ Gemini ใช้ประกอบกับรูป
 
 ### รัน backend ในเครื่อง
